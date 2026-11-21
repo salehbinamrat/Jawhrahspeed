@@ -1,0 +1,59 @@
+name: Hotspot tests and verified packages
+on:
+  push:
+    branches: [main, 'improvement/**']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check JavaScript syntax
+        run: |
+          node --check js/portal.core.js
+          node --check js/portal.chap.js
+      - name: Run offline regression tests
+        run: node --test tests/*.test.js
+  browser:
+    needs: check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install headless Chromium test dependencies
+        run: |
+          python -m pip install playwright==1.56.0
+          python -m playwright install --with-deps chromium
+      - name: Verify responsive login and mocked Hotspot workflows
+        run: python scripts/browser_smoke.py
+  package:
+    needs: [check, browser]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Create reproducible router and source archives
+        run: python scripts/build_release.py
+      - name: Verify SHA256 checksums
+        run: cd dist && sha256sum --check SHA256SUMS
+      - name: Upload verified release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jawhrahspeed-r9-verified
+          path: |
+            dist/Jawhrahspeed_Hotspot_r9_2026-11-21.zip
+            dist/Jawhrahspeed_Source_r9_2026-11-21.zip
+            dist/SHA256SUMS
+          if-no-files-found: error
