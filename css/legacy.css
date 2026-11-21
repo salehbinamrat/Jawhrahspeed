@@ -1,0 +1,58 @@
+/* Legacy Android browser styling. Loaded before style.css, without CSS variables, grid or masks. */
+html,body{margin:0;padding:0;min-height:100%;background:#eaf1f7;color:#1b293c;direction:rtl;font-family:Arial,Tahoma,sans-serif}
+*,*:before,*:after{box-sizing:border-box}
+button,input,a{font-family:Arial,Tahoma,sans-serif}
+.container{min-height:100vh;background:#eaf1f7}
+.screen{width:100%;max-width:430px;min-width:0;margin:0 auto}
+.screen-content{padding:12px 10px 22px;min-height:100vh}
+.login{display:block}
+.main-frame{width:100%;margin:0 0 12px;padding:12px 9px;background:#fff;color:#1b293c;border:1px solid #bbcfdd;border-radius:16px}
+.brand-dates{margin-bottom:6px;color:#344d66;font-size:12px}
+.brand-identity{min-height:96px;text-align:center}
+.code-logo{display:inline-block;position:relative;width:78px;height:78px;vertical-align:middle}
+.logo-core{display:block;position:relative;width:70px;height:70px;line-height:70px;margin:4px auto;font-size:43px;color:#f5a21c;text-align:center}
+.logo-core:before{content:'◆'}
+.brand-copy{display:inline-block;vertical-align:middle;text-align:right}
+.brand-copy h1{margin:0;color:#0c547f;font-size:25px}
+.brand-copy p{font-size:11px;color:#4b657c;margin-top:6px}
+.theme-bar{text-align:center;margin:8px 0}
+.theme-bar button{min-width:30px;min-height:30px;margin:2px;border:1px solid #718aa1;border-radius:6px;background:#e2ebf3;color:#174565;cursor:pointer}
+.theme-swatch.orange{background:#f2a13a}.theme-swatch.blue{background:#1688cf}.theme-swatch.purple{background:#8562b0}
+.speed-frame-title,.login-frame-title{font-weight:bold;font-size:17px;margin-bottom:8px;text-align:center}
+.speed-options{border:0;padding:0;width:100%;margin:0 auto;text-align:center}
+.speed-choice{display:inline-block;position:relative;vertical-align:top;width:23%;min-width:0;margin:0 .3% 5px;cursor:pointer}
+.speed-choice input{position:absolute;top:5px;right:5px;width:16px;height:16px}
+.speed-card{display:block;background:#eef4f8;border:1px solid #8eaabe;color:#15425e;border-radius:8px;padding:9px 1px;min-height:55px;font-size:12px}
+.speed-card strong{display:block;white-space:normal;line-height:1.4}
+.speed-choice input:checked+.speed-card{background:#125d99;border-color:#125d99;color:#fff}
+.speed-confirmation{margin:5px auto 0;padding:6px;font-size:12px;border:1px solid #a9becb;border-radius:8px}
+.login-form form{margin:0 auto;max-width:380px}
+.manual-entry-separator{margin:8px auto;font-size:12px;color:#415b72}
+.login-field{position:relative;margin:9px 0}
+.login-input{width:100%;height:50px;min-height:46px;background:#fff;color:#111;border:1px solid #839cb1;border-radius:9px;padding:9px 12px;text-align:right;font-size:16px}
+.login-actions-row{display:block;text-align:center}
+.login-submit{display:inline-block;width:72%;min-height:50px;margin:4px auto;border:0;border-radius:9px;background:#1466a5;color:white;font-size:17px;font-weight:bold;cursor:pointer}
+.recent-logins-btn{display:inline-block;width:19%;min-width:42px;min-height:50px;border:1px solid #7294a8;border-radius:9px;background:#e7eef6;color:#175386;vertical-align:middle}
+.manual-login-fallback{display:block;margin:8px auto;padding:9px 12px;border:1px solid #1466a5;background:#f4faff;color:#155c8b;border-radius:8px}
+.manual-login-fallback[hidden]{display:none}
+.error{display:none;padding:10px;color:#a01628;background:#ffedf0;border-radius:8px;line-height:1.6}
+.error.show{display:block}
+.services-grid{text-align:center}
+.services-grid>button{display:inline-block;width:31%;min-height:60px;margin:2px 0;padding:8px 0;background:#e5f1fa;border:1px solid #9bb8cc;border-radius:8px;color:#154b72}
+.home-support{text-align:center}.customer-actions a{display:inline-block;margin:4px;padding:9px;color:#125388}
+.app{display:none;position:fixed;top:0;right:0;bottom:0;left:0;overflow:auto;z-index:1000;background:rgba(0,0,0,.72);padding:10px}
+.app.active{display:block}
+.app-bot{max-width:420px;margin:5vh auto;padding:14px 12px;background:#fff;color:#182f42;border:1px solid #789cb7;border-radius:14px;overflow:auto;max-height:90vh}
+.app-bot .title{margin:0 auto 12px;font-size:17px;font-weight:bold;color:#164e78}
+.app-submit,.app-logout,.clear-cards-btn{display:block;margin:12px auto;padding:10px 16px;min-height:44px;border:1px solid #286a9f;border-radius:9px;background:#1466a5;color:#fff;font-size:15px}
+.data{padding:8px;border-bottom:1px solid #d9e3ec;line-height:1.6;text-align:right}
+.saved-card-button{display:block;width:100%;padding:10px;margin:6px 0;border:1px solid #9eb8d2;border-radius:8px;background:#f4f8ff;text-align:right}
+.saved-card-privacy{font-size:12px;line-height:1.5}
+.remember-password-choice{display:block;padding:8px;font-size:12px;text-align:right}
+.remember-password-choice input{width:18px;height:18px;vertical-align:middle}
+.price-card{display:table;width:100%;table-layout:fixed;margin:5px auto;padding:7px 0;border-bottom:1px solid #c5d8e6}
+.price-card strong,.price-card span{display:table-cell;width:33.3%;font-size:12px}
+.sell-card{padding:9px;margin:6px 0;border:1px solid #c4d8e4;border-radius:8px}
+@media(max-width:319px){.screen-content{padding:7px 4px}.brand-copy h1{font-size:19px}.code-logo{width:54px;height:54px}.logo-core{width:51px;height:51px;line-height:51px;font-size:34px}.speed-choice{width:47%;margin-bottom:5px}.services-grid>button{font-size:11px}}
+html.no-css-vars .logo-core.icon-diamond:before{content:'◆'!important;position:relative!important;display:block!important;width:70px;height:70px;background:none!important;-webkit-mask:none!important;mask:none!important;color:#ec9d21;font:normal 52px/70px Arial,Tahoma,sans-serif!important}
+html.no-css-vars .logo-core.icon-diamond:after{display:none!important}

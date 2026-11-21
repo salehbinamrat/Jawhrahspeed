@@ -234,14 +234,16 @@ out.push({username:user,password:cfg.passwordRequired?pass:''});
 return out;
 }
 function cookieValue(key) {
-var cookies = d.cookie ? d.cookie.split(';') : [], prefix = key + '=';
+var raw = '';
+try { raw = d.cookie || ''; } catch (ignore) { return null; }
+var cookies = raw ? raw.split(';') : [], prefix = key + '=';
 for (var i = 0; i < cookies.length; i++) {
 var c = trim(cookies[i]); if (c.indexOf(prefix) !== 0) continue;
 try { return decodeURIComponent(c.substring(prefix.length)); } catch (ignore) { return c.substring(prefix.length); }
 }
 return null;
 }
-function deleteLegacyCookie(key) { d.cookie = key + '=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; SameSite=Lax'; }
+function deleteLegacyCookie(key) { try { d.cookie = key + '=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; SameSite=Lax'; } catch (ignore) {} }
 function maySavePassword() { return storageGet(safeLocal(), PASSWORD_OPT_IN) === '1'; }
 function privateCards(cards) {
 if (maySavePassword()) return cards;

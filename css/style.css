@@ -39,3 +39,6 @@ html,body,.container,.screen,.screen-content{background:#081220;color:#f5f6f9}.m
 .remember-password-choice span{text-align:right;line-height:1.55}
 @media(max-height:650px){.screen-content{padding-top:8px}.brand-frame{padding-top:6px;padding-bottom:8px}
  .brand-identity{min-height:80px}.brand-dates{margin-bottom:3px}.main-frame+.main-frame{margin-top:9px}}
+
+/* r8: prevent horizontal overflow on legacy narrow captive windows. */
+@media (max-width: 319px){.screen{min-width:0;width:100%;max-width:100%}.screen-content{padding:9px 5px 19px}.speed-options{grid-template-columns:repeat(2,minmax(0,1fr))}.speed-choice{width:48%}.speed-card{min-height:48px}.brand-copy h1{font-size:21px}.brand-identity{gap:3px}.code-logo{width:69px;height:69px;flex-basis:69px}.login-actions-row{grid-template-columns:minmax(0,1fr) 44px}.recent-logins-btn{width:44px;height:50px}}

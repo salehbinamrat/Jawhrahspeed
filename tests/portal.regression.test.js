@@ -23,7 +23,7 @@ class Element {
   querySelectorAll(){return [];} focus(){}
   emit(t){ for(const cb of this.listeners[t] || []) cb({preventDefault(){},returnValue:true}); }
 }
-function simulator({loginError='invalid username or password', success=false, bootUser=null, blockState=null, passwordOptIn=false, savedCards=null}={}) {
+function simulator({loginError='invalid username or password', success=false, bootUser=null, blockState=null, passwordOptIn=false, savedCards=null, cookieThrows=false}={}) {
   let clock = 1700000000000, nextTimer=0;
   let tasks=[], requests=[];
   function delay(fn, ms){const task={id:++nextTimer,at:clock+(Number(ms)||0),fn}; tasks.push(task);return task.id;}
@@ -43,6 +43,10 @@ function simulator({loginError='invalid username or password', success=false, bo
   const doc={readyState:'complete',forms:{login:form},body:el('body'),documentElement:el('html'),cookie:'',hidden:false,
     getElementById:el,createElement:()=>new Element(),querySelector(q){if(q==='.login-submit')return el('submit');if(q==='.logout-submit')return el('logout');if(q==='script[enable-hot-blocker]'){const e=el('blocker');e.setAttribute('try-count','10');e.setAttribute('block-time','1');return e;}if(q==='[count-down-span]')return el('countdown');return null;},
     querySelectorAll(){return [];},getElementsByName(n){return n==='speed-choice'?speed:[];},addEventListener(){} };
+  if (cookieThrows) Object.defineProperty(doc, 'cookie', {
+    get(){throw new Error('cookie read blocked by captive WebView');},
+    set(){throw new Error('cookie write blocked by captive WebView');}
+  });
   const win={PORTAL_CONFIG:{site:'jawhara',passwordRequired:true,storageKey:'jawhara_success_cards_v3',speedKey:'jawhara_speed_choice',blockKey:'jawhara_bad_attempts_v3',speedPorts:{'najm-speed-3m':62021,'najm-speed-10m':62022,'najm-speed-open':62024},speedNames:{hotspot:'هوتسبوت','najm-speed-3m':'ضعيفة','najm-speed-10m':'متوسطة','najm-speed-open':'مفتوحة'}},
     location:{protocol:'http:',hostname:'router.local',search:''},navigator:{userAgent:'Android 6',hardwareConcurrency:4},localStorage:local,sessionStorage:session,Intl,Image:class {set src(url){requests.push({image:url});}}};
   class XHR {
@@ -161,4 +165,11 @@ test('logout still works and clears requested-speed state',()=>{
  assert.ok(sim.requests.some(x=>x.url?.startsWith('/logout')));
  assert.equal(sim.session.getItem('jawhara_speed_choice'),null);
  assert.equal(sim.el('login').style.display,'block');
+});
+
+test('restricted captive WebViews without cookie access can still initialize and log in',()=>{
+ const sim=simulator({cookieThrows:true, success:true});
+ sim.enter('alice','correct');
+ assert.ok(sim.requests.some(r=>r.url?.startsWith('/login')));
+ assert.equal(sim.el('status').style.display,'block');
 });
