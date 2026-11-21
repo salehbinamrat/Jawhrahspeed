@@ -45,19 +45,10 @@ if (show) button.removeAttribute('hidden');
 else button.setAttribute('hidden', 'hidden');
 }
 function submitNative() {
+/* A RouterOS /login page can receive CHAP parameters; a static index.html
+   cannot. Never downgrade to a raw password POST after a CHAP failure. */
 if (!$form || loginPending || logoutPending || isBlocked()) return;
-var userField = formField('username'), passField = formField('password');
-if (!userField) return;
-var user = normalize(userField.value, true);
-var pass = cfg.passwordRequired ? normalize(passField && passField.value, false) : '';
-userField.value = user;
-if (passField && cfg.passwordRequired) passField.value = pass;
-if (!user || user.length > 64 || (cfg.passwordRequired && (!pass || pass.length > 128)) || /[\x00-\x1F\x7F]/.test(user + pass)) {
-showError(cfg.passwordRequired ? 'أدخل اسم المستخدم وكلمة المرور' : 'أدخل رقم الكرت أولا');
-return;
-}
-/* submit() deliberately bypasses the asynchronous event handler. */
-$form.submit();
+try { w.location.href = '/login'; } catch (ignore) { showError('افتح صفحة الدخول من الراوتر مباشرة'); }
 }
 function now() { return (new Date()).getTime(); }
 function storageGet(storage, key) { try { return storage && storage.getItem(key); } catch (ignore) { return null; } }
@@ -512,13 +503,16 @@ return false;
 function request(url, options) {
 options = options || {};
 var xhr = null, completed = false, watchdog, requestEpoch = epoch;
-function done(problem) {
+function done(problem, response) {
 if (completed) return;
 completed = true; clearTimeout(watchdog);
 try { xhr.onreadystatechange = null; xhr.onerror = null; } catch (ignore) {}
 if (requestEpoch !== epoch) return;
 if (problem) {
-if (options.kind === 'login') {
+if (options.kind === 'challenge') {
+finishLogin(); manualFallbackVisible(true);
+showError('تعذر تجهيز المصادقة من الراوتر، افتح نموذج الدخول البديل');
+} else if (options.kind === 'login') {
 finishLogin(); attemptUser = ''; attemptPass = ''; attemptSpeed = 'hotspot'; manualFallbackVisible(true);
 showError(problem === 'TIMEOUT' ? 'تأخر رد الراوتر، حاول مجددا' :
 problem === 'NETWORK' ? 'انقطع الاتصال بالراوتر، حاول مجددا' :
@@ -531,7 +525,7 @@ statusFailures++;
 if (statusFailures === 3) showError('تعذر تحديث حالة الاتصال');
 }
 }
-if (typeof options.next === 'function') options.next();
+if (typeof options.next === 'function') options.next(problem, response);
 }
 try {
 if (!canRequest()) { done('NETWORK'); return null; }
@@ -544,8 +538,15 @@ if (xhr.readyState !== 4 || completed || requestEpoch !== epoch) return;
 if (xhr.status < 200 || xhr.status >= 300) { done('HTTP'); return; }
 var data; try { data = JSON.parse(xhr.responseText.replace(/^\uFEFF/, '')); } catch (ignore) { done('INVALID_REPLY'); return; }
 xhr._portalComplete = true;
-try { if (!dispatchByKind(options.kind, data)) { done('INVALID_REPLY'); return; } } catch (ignore) { done('INVALID_REPLY'); return; }
-done(false);
+if (options.kind === 'challenge') {
+  if (data.action !== 'onChapInfo' || (data.mode !== 'chap' && data.mode !== 'pap')) {
+    done('INVALID_REPLY'); return;
+  }
+  done(false, data);
+} else {
+  try { if (!dispatchByKind(options.kind, data)) { done('INVALID_REPLY'); return; } } catch (ignore) { done('INVALID_REPLY'); return; }
+  done(false);
+}
 };
 xhr.onerror = function () { done('NETWORK'); };
 xhr.send(options.body || null);
@@ -568,13 +569,30 @@ epoch++; activeLoginSerial++;
 var serial = activeLoginSerial, choice = selectedSpeed();
 if ($submit) { $submit.disabled = true; addClass($submit, 'processing'); }
 clearError(); speedConfirm();
+/* RouterOS only exposes chap-id and chap-challenge on /login.  Obtain
+   them for every attempt, without reusing the stale challenge after a retry.
+   Never send the cleartext password if CHAP was requested but is invalid. */
+request('/login?var=challenge&t=' + now(), {kind:'challenge', next:function (problem, auth) {
+if (problem || !loginPending || serial !== activeLoginSerial) return;
+var responsePassword = pass;
+if (auth.mode === 'chap') {
+  try {
+    if (!w.PortalChap || typeof w.PortalChap.challengeResponse !== 'function') throw new Error('No CHAP module');
+    responsePassword = w.PortalChap.challengeResponse(auth.id, pass, auth.challenge);
+  } catch (ignore) {
+    finishLogin(); manualFallbackVisible(true);
+    showError('تعذر قراءة تحدي المصادقة من الراوتر، افتح نموذج الدخول البديل');
+    return;
+  }
+}
 signalSpeed(choice, serial, function () {
-if (!loginPending || serial !== activeLoginSerial) return;
-var body = 'username=' + encodeURIComponent(user);
-if (cfg.passwordRequired) body += '&password=' + encodeURIComponent(pass);
-if (choice !== 'hotspot') body += '&domain=' + encodeURIComponent(choice);
-request('/login?var=callBack', {kind:'login',method:'POST',body:body});
+  if (!loginPending || serial !== activeLoginSerial) return;
+  var body = 'username=' + encodeURIComponent(user);
+  if (cfg.passwordRequired) body += '&password=' + encodeURIComponent(responsePassword);
+  if (choice !== 'hotspot') body += '&domain=' + encodeURIComponent(choice);
+  request('/login?var=callBack', {kind:'login',method:'POST',body:body});
 });
+}});
 return false;
 }
 function logout() {

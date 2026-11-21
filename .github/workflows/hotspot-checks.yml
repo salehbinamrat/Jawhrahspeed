@@ -17,7 +17,9 @@ jobs:
         with:
           python-version: '3.11'
       - name: Check JavaScript syntax
-        run: node --check js/portal.core.js
+        run: |
+          node --check js/portal.core.js
+          node --check js/portal.chap.js
       - name: Run offline regression tests
         run: node --test tests/*.test.js
   browser:
@@ -49,9 +51,9 @@ jobs:
       - name: Upload verified release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Jawhrahspeed-r8-verified
+          name: Jawhrahspeed-r9-verified
           path: |
-            dist/Jawhrahspeed_Hotspot_r8_2026-11-21.zip
-            dist/Jawhrahspeed_Source_r8_2026-11-21.zip
+            dist/Jawhrahspeed_Hotspot_r9_2026-11-21.zip
+            dist/Jawhrahspeed_Source_r9_2026-11-21.zip
             dist/SHA256SUMS
           if-no-files-found: error

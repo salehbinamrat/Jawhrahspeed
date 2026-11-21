@@ -8,11 +8,11 @@ from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
 DATE = '2026-11-21'
-VERSION = 'r8'
+VERSION = 'r9'
 HTML = ('index.html', 'login.html', 'flogin.html', 'alogin.html',
         'logout.html', 'flogout.html', 'status.html', 'fstatus.html',
         'error.html', 'redirect.html')
-ASSETS = ('css/style.css', 'css/legacy.css', 'js/portal.core.js',
+ASSETS = ('css/style.css', 'css/legacy.css', 'js/portal.core.js', 'js/portal.chap.js',
           'font/Almarai.woff2', 'font/fontello-used.woff')
 DEPLOY = tuple(sorted(HTML + ASSETS))
 EXTRA = ('README.md', '.github/workflows/hotspot-checks.yml',
@@ -39,6 +39,9 @@ def validate():
         text = (ROOT / name).read_text(encoding='utf-8')
         if '\ufeff' in text:
             raise ValueError(f'Unexpected BOM in Hotspot file: {name}')
+    login = (ROOT / 'login.html').read_text(encoding='utf-8')
+    if '$(chap-id-esc)' not in login or 'var == "challenge"' not in login:
+        raise ValueError('The router CHAP challenge endpoint is missing')
     if '$(link-login-only)' not in index:
         raise ValueError('Native RouterOS login form has been removed')
     if not all(f'{port}' in index for port in ('62021', '62022', '62024')):

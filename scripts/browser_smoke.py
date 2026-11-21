@@ -19,7 +19,8 @@ XMLHttpRequest.prototype.setRequestHeader=function(){};
 XMLHttpRequest.prototype.abort=function(){};
 XMLHttpRequest.prototype.send=function(){
  var t=this, response, url=this._url;
- if(url.indexOf('/login?')===0){window.__portalLoggedIn=true;response={action:'onLoggedIn',logged_in:'yes'};}
+ if(url.indexOf('/login?var=challenge')===0){response={action:'onChapInfo',mode:'pap'};}
+ else if(url.indexOf('/login?')===0){window.__portalLoggedIn=true;response={action:'onLoggedIn',logged_in:'yes'};}
  else if(url.indexOf('/logout?')===0){window.__portalLoggedIn=false;response={action:'onLoggedOut',logged_in:'no'};}
  else {response={action:'onStatusQuery',logged_in:window.__portalLoggedIn?'yes':'no',username:'12345',remain_bytes_total:'---',session_time_left:'---',uptime:'0s',bytes_in:'0',bytes_out:'0'};}
  setTimeout(function(){t.responseText=JSON.stringify(response);t.status=200;t.readyState=4;if(t.onreadystatechange)t.onreadystatechange();},0);
@@ -36,6 +37,10 @@ def prepared_html(legacy_only=False):
         replacement = '' if legacy_only and file=='style.css' else '<style>' + code + '</style>'
         raw, count = re.subn(pat, lambda _:replacement, raw)
         assert count == 1, f'Missing CSS reference: {file}'
+    chap_script = (ROOT / 'js/portal.chap.js').read_text(encoding='utf-8')
+    raw,count = re.subn(r'<script src="js/portal.chap.js\?[^"]+"></script>',
+                        lambda m:'<script>'+chap_script+'</script>',raw)
+    assert count == 1, 'CHAP script must load in browser smoke test'
     script = (ROOT / 'js/portal.core.js').read_text(encoding='utf-8')
     raw,count = re.subn(r'(<script[^>]*?)\s+src="js/portal.core.js\?[^\"]+"([^>]*>)(\s*)</script>',
                         lambda m:m.group(1)+m.group(2)+script+'</script>',raw)

@@ -1,5 +1,29 @@
+$(if var == "challenge")
+$(if chap-id)
+{"action":"onChapInfo","mode":"chap","id":"$(chap-id-esc)","challenge":"$(chap-challenge-esc)"}
+$(else)
+{"action":"onChapInfo","mode":"pap"}
+$(endif)
+$(else)
 $(if var == "")
-<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>الجوهرة نت - تسجيل الدخول</title><style>body{font-family:Arial,sans-serif;max-width:450px;margin:40px auto;padding:14px;text-align:center;background:#eef2f5;color:#1b2330}form{border:1px solid #b0b8c1;border-radius:14px;background:#fff;padding:22px}input,button{font-size:17px;display:block;width:100%;box-sizing:border-box;margin:12px 0;padding:12px;border-radius:9px;border:1px solid #8895a7}button{color:#fff;background:#1262ad;border:0}p{line-height:1.8}</style></head><body><h2>الجوهرة نت</h2><p>أدخل بيانات الكرت لتسجيل الدخول.</p>$(if error)<p role="alert" style="color:#a11629">تعذر تسجيل الدخول، راجع بيانات الكرت وحاول مجددا</p>$(endif)<form action="$(link-login-only)" method="post"><input name="username" maxlength="64" placeholder="رقم الكرت / اسم المستخدم" required autocomplete="off"><input type="password" name="password" maxlength="128" autocomplete="current-password" placeholder="كلمة المرور" required><button type="submit">دخول</button></form><p><a href="index.html">فتح الصفحة الرئيسية</a></p>$(if error)
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>الجوهرة نت - تسجيل الدخول</title><style>body{font-family:Arial,sans-serif;max-width:450px;margin:40px auto;padding:14px;text-align:center;background:#eef2f5;color:#1b2330}form{border:1px solid #b0b8c1;border-radius:14px;background:#fff;padding:22px}input,button{font-size:17px;display:block;width:100%;box-sizing:border-box;margin:12px 0;padding:12px;border-radius:9px;border:1px solid #8895a7}button{color:#fff;background:#1262ad;border:0}p{line-height:1.8}</style>$(if chap-id)
+<script src="js/portal.chap.js?v=jawhara-chap-r9"></script>
+<script>
+function jawharaChapDirect(form) {
+  try {
+    if (!window.PortalChap) throw new Error('CHAP unavailable');
+    form.elements.password.value = window.PortalChap.challengeResponse(
+      '$(chap-id-esc)', form.elements.password.value, '$(chap-challenge-esc)');
+    return true;
+  } catch (ignore) {
+    var note = document.getElementById('chapFallbackError');
+    if (note) note.style.display = 'block';
+    return false;
+  }
+}
+</script>
+$(endif)
+</head><body><h2>الجوهرة نت</h2><p role="alert" id="chapFallbackError" style="display:none;color:#a11629">تعذر تجهيز تسجيل الدخول، أعد فتح صفحة الدخول من الشبكة</p><p>أدخل بيانات الكرت لتسجيل الدخول.</p>$(if error)<p role="alert" style="color:#a11629">تعذر تسجيل الدخول، راجع بيانات الكرت وحاول مجددا</p>$(endif)<form action="$(link-login-only)" method="post" $(if chap-id) onsubmit="return jawharaChapDirect(this)" $(endif)><input name="username" maxlength="64" placeholder="رقم الكرت / اسم المستخدم" required autocomplete="off"><input type="password" name="password" maxlength="128" autocomplete="current-password" placeholder="كلمة المرور" required><button type="submit">دخول</button></form><p><a href="index.html">فتح الصفحة الرئيسية</a></p>$(if error)
 <span id="hotspot-error-reasons" hidden data-original="$(error-orig-esc)" data-translated="$(error-esc)"></span>
 <script>(function(){
 var reason = document.getElementById('hotspot-error-reasons');
@@ -20,4 +44,6 @@ $(if error == "")
 $(else)
 {"logged_in":"$(logged-in)","error":"$(error-esc)","error_orig":"$(error-orig-esc)","action":"onLoginError"}
 $(endif)
+$(endif)
+
 $(endif)

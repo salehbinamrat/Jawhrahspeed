@@ -37,7 +37,7 @@ test('native RouterOS fallback stays available with POST not JSON callback', () 
   assert.match(html, /action="\$\(link-login-only\)"/);
   assert.match(html, /method="post"/);
   assert.match(html, /id="manualLoginFallback"/);
-  assert.match(fs.readFileSync(path.join(root, 'js/portal.core.js'), 'utf8'), /\$form\.submit\(\)/);
+  assert.match(fs.readFileSync(path.join(root, 'js/portal.core.js'), 'utf8'), /w\.location\.href = '\/login'/);
 });
 
 test('both modern and legacy short-screen layouts keep the login action accessible', () => {

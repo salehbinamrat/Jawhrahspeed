@@ -4,7 +4,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const crypto = require('node:crypto');
 const source = fs.readFileSync(path.join(__dirname, '../js/portal.core.js'), 'utf8');
+const chapSource = fs.readFileSync(path.join(__dirname, '../js/portal.chap.js'), 'utf8');
 const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
 class Storage {
   constructor(values={}) { this.map = {...values}; }
@@ -23,7 +25,7 @@ class Element {
   querySelectorAll(){return [];} focus(){}
   emit(t){ for(const cb of this.listeners[t] || []) cb({preventDefault(){},returnValue:true}); }
 }
-function simulator({loginError='invalid username or password', success=false, bootUser=null, blockState=null, passwordOptIn=false, savedCards=null, cookieThrows=false}={}) {
+function simulator({loginError='invalid username or password', success=false, bootUser=null, blockState=null, passwordOptIn=false, savedCards=null, cookieThrows=false, authMode='pap', chapBroken=false}={}) {
   let clock = 1700000000000, nextTimer=0;
   let tasks=[], requests=[];
   function delay(fn, ms){const task={id:++nextTimer,at:clock+(Number(ms)||0),fn}; tasks.push(task);return task.id;}
@@ -52,13 +54,15 @@ function simulator({loginError='invalid username or password', success=false, bo
   class XHR {
     open(method,url){this.method=method;this.url=url;this.readyState=1;}setRequestHeader(){}
     send(body){requests.push({method:this.method,url:this.url,body});delay(()=>{
-      const reply=this.url.startsWith('/status')?{action:'onStatusQuery',logged_in:bootUser?'yes':'no',username:bootUser,remain_bytes_total:'---',session_time_left:'---'}:
+      const reply=this.url.startsWith('/login?var=challenge')?{action:'onChapInfo',mode:authMode,id:chapBroken?'$(chap-id-esc)':'%F9',challenge:'%00%10%20%30%40%50%60%70%80%90%A0%B0%C0%D0%E0%F0'}:
+        this.url.startsWith('/status')?{action:'onStatusQuery',logged_in:bootUser?'yes':'no',username:bootUser,remain_bytes_total:'---',session_time_left:'---'}:
         this.url.startsWith('/login')?(success?{action:'onLoggedIn',logged_in:'yes'}:{action:'onLoginError',logged_in:'no',error_orig:loginError}):{action:'onLoggedOut',logged_in:'no'};
       this.readyState=4;this.status=200;this.responseText=JSON.stringify(reply);if(this.onreadystatechange)this.onreadystatechange();
     },1);}
     abort(){this.aborted=true;}
   }
   win.XMLHttpRequest=XHR;
+  vm.runInNewContext(chapSource,{window:win,document:doc});
   vm.runInNewContext(source,{window:win,document:doc,Image:win.Image,Date:FakeDate,setTimeout:delay,clearTimeout:cancel,console,encodeURIComponent,decodeURIComponent});
   advance(5); // initial status request
   function enter(user='card1',pass='secret',speedName='hotspot'){
@@ -139,7 +143,7 @@ test('custom speed keeps all three port signals and domain parameter, without st
  const images=sim.requests.filter(x=>x.image);
  assert.equal(images.length,3);
  assert.ok(images.every(x=>x.image.includes(':62021/najm-speed.gif')));
- const login=sim.requests.find(x=>x.url?.startsWith('/login'));
+ const login=sim.requests.find(x=>x.url?.startsWith('/login') && x.method === 'POST');
  assert.ok(login);
  assert.match(login.body,/domain=najm-speed-3m/);
  assert.equal(sim.session.getItem('jawhara_speed_choice'),null);
@@ -172,4 +176,30 @@ test('restricted captive WebViews without cookie access can still initialize and
  sim.enter('alice','correct');
  assert.ok(sim.requests.some(r=>r.url?.startsWith('/login')));
  assert.equal(sim.el('status').style.display,'block');
+});
+
+test('CHAP-enabled router gets a fresh challenge and receives digest, never plaintext',()=>{
+ const sim=simulator({success:true,authMode:'chap'});
+ sim.enter('card9','secret-pass');
+ const get=sim.requests.find(x=>x.url?.startsWith('/login?var=challenge'));
+ const post=sim.requests.find(x=>x.url?.startsWith('/login') && x.method==='POST');
+ assert.ok(get,'CHAP challenge was not requested from /login');
+ assert.ok(post,'CHAP login POST was not attempted');
+ const id=Buffer.from([249]);
+ const challenge=Buffer.from('00102030405060708090a0b0c0d0e0f0','hex');
+ const expected=crypto.createHash('md5').update(Buffer.concat([id,Buffer.from('secret-pass'),challenge])).digest('hex');
+ const form=new URLSearchParams(post.body);
+ assert.equal(form.get('username'),'card9');
+ assert.equal(form.get('password'),expected);
+ assert.ok(!post.body.includes('secret-pass'), 'plaintext password was transmitted');
+ assert.equal(sim.el('status').style.display,'block');
+});
+
+test('malformed CHAP response never falls back to sending a raw password',()=>{
+ const sim=simulator({authMode:'chap',chapBroken:true});
+ sim.enter('card9','secret-pass');
+ assert.ok(sim.requests.some(x=>x.url?.startsWith('/login?var=challenge')));
+ assert.equal(sim.requests.filter(x=>x.method==='POST' && x.url?.startsWith('/login')).length,0);
+ assert.match(sim.el('error').textContent,/تحدي المصادقة/);
+ assert.equal(sim.el('manualLoginFallback').getAttribute('hidden'),null);
 });
