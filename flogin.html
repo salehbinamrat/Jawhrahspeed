@@ -1,0 +1,23 @@
+$(if var == "")
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>الجوهرة نت - تسجيل الدخول</title><style>body{font-family:Arial,sans-serif;max-width:450px;margin:40px auto;padding:14px;text-align:center;background:#eef2f5;color:#1b2330}form{border:1px solid #b0b8c1;border-radius:14px;background:#fff;padding:22px}input,button{font-size:17px;display:block;width:100%;box-sizing:border-box;margin:12px 0;padding:12px;border-radius:9px;border:1px solid #8895a7}button{color:#fff;background:#1262ad;border:0}p{line-height:1.8}</style></head><body><h2>الجوهرة نت</h2><p>أدخل بيانات الكرت لتسجيل الدخول.</p>$(if error)<p role="alert" style="color:#a11629">تعذر تسجيل الدخول، راجع بيانات الكرت وحاول مجددا</p>$(endif)<form action="$(link-login-only)" method="post"><input name="username" maxlength="64" placeholder="رقم الكرت / اسم المستخدم" required autocomplete="off"><input type="password" name="password" maxlength="128" autocomplete="current-password" placeholder="كلمة المرور" required><button type="submit">دخول</button></form><p><a href="index.html">فتح الصفحة الرئيسية</a></p>$(if error)
+<span id="hotspot-error-reasons" hidden data-original="$(error-orig-esc)" data-translated="$(error-esc)"></span>
+<script>(function(){
+var reason = document.getElementById('hotspot-error-reasons');
+if (!reason) return;
+var original = reason.getAttribute('data-original') || '';
+var translated = reason.getAttribute('data-translated') || '';
+var error = original || translated;
+if (!error) return;
+var url = 'index.html';
+try { sessionStorage.setItem('jawhara_1_login_error_20261121', error); }
+catch (ignore) { url += '?hotspot_error=' + error; }
+window.location.replace(url);
+})();</script>
+$(endif)</body></html>
+$(else)
+$(if error == "")
+{"logged_in":"$(logged-in)","action":"onLoginStart"}
+$(else)
+{"logged_in":"$(logged-in)","error":"$(error-esc)","error_orig":"$(error-orig-esc)","action":"onLoginError"}
+$(endif)
+$(endif)

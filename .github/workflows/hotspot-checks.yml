@@ -1,0 +1,17 @@
+name: Hotspot checks
+on:
+  push:
+    branches: [main, 'improvement/**']
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: node --check js/portal.core.js
+      - name: Run offline regression tests
+        run: node --test tests/portal.test.js
