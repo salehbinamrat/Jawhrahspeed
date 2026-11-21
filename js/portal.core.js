@@ -3,7 +3,7 @@
 var cfg = w.PORTAL_CONFIG || {};
 var $login, $status, $form, $submit, $logout, $error;
 var signedIn = false, loginPending = false, logoutPending = false;
-var attemptUser = '', attemptPass = '';
+var attemptUser = '', attemptPass = '', attemptSpeed = 'hotspot';
 var statusTimer = 0, errorTimer = 0, welcomeTimer = 0, blockTimer = 0;
 var statusRequest = null, statusFailures = 0, epoch = 0, activeLoginSerial = 0;
 var loginTimestamp = 0, earlyNegativeCount = 0;
@@ -12,6 +12,8 @@ var STORE = cfg.storageKey || 'hotspot_saved_cards_v3';
 var SPEED_STORE = cfg.speedKey || 'hotspot_speed_choice';
 var BLOCK_STORE = cfg.blockKey || 'hotspot_browser_attempts_v3';
 var HISTORY_TTL = 30 * 24 * 60 * 60 * 1000;
+var PASSWORD_OPT_IN = STORE + '_password_opt_in';
+var SPEED_USER = SPEED_STORE + '_user';
 function el(id) { return d.getElementById(id); }
 function trim(s) { return String(s == null ? '' : s).replace(/^\s+|\s+$/g, ''); }
 function hasClass(node, name) { return !!node && (' ' + node.className + ' ').indexOf(' ' + name + ' ') !== -1; }
@@ -103,7 +105,7 @@ code = 'TIME_LIMIT'; message = 'انتهى وقت الكرت';
 } else if (/\b(?:account expired|user expired|expired account|profile expired|validity expired|user validity expired|validity period expired|card expired|account has expired)\b|(?:انتهت|انتهاء) صلاحية (?:الكرت|الحساب|الباقة)|(?:كرت|حساب|بطاقة) منته(?:ية|ي) الصلاحية/.test(t)) {
 code = 'EXPIRED'; message = 'انتهت صلاحية الكرت';
 } else if (/\b(?:no more sessions|no more sessions are allowed|simultaneous session(?:s)?|session limit (?:reached|exceeded)|too many (?:active |concurrent )?sessions|maximum (?:active )?sessions|already logged in|already active|user already logged|user is online|already in use|only one login per user)\b|(?:مستخدم|يستخدم) (?:على|من) جهاز آخر|(?:الكرت|الحساب) قيد الاستخدام|(?:عدد|حد) الجلسات/.test(t)) {
-code = 'SESSION_LIMIT'; message = 'الكرت مستخدم على جهاز آخر';
+code = 'SESSION_LIMIT'; message = 'الكرت لديه جلسة نشطة';
 } else if (/\b(?:invalid calling.station.id|not allowed to log in from this mac|mac address (?:not allowed|mismatch)|mac mismatch|device binding|mac binding|not allowed from this mac|not allowed from this device)\b|(?:الجهاز غير مسموح|عنوان الجهاز غير مسموح|هذا الجهاز غير مصرح)/.test(t)) {
 code = 'DEVICE_RESTRICTION'; message = 'هذا الكرت غير مسموح على هذا الجهاز';
 } else if (/\b(?:account disabled|user disabled|user is disabled|disabled user|account inactive|user is inactive)\b|(?:الحساب|المستخدم) معطل/.test(t)) {
@@ -121,28 +123,29 @@ code = 'TEMP_LOCK'; message = 'محاولات كثيرة، حاول لاحقا';
 } else if (/\b(?:quota exceeded|usage limit reached|limit reached)\b|تم تجاوز حد الاستخدام/.test(t)) {
 code = 'UNSPECIFIED_LIMIT'; message = 'بلغ الكرت حد الاستخدام';
 } else if (/\b(?:no valid profile(?: found)?|no profile available|no active profile)\b|لا توجد باقة صالحة/.test(t)) {
-/* No valid profile does not reveal whether the user is unknown, inactive, or
-   has no usable plan. Follow the requested generic bad-card UX here. */
-code = 'NO_VALID_PROFILE'; message = BAD_CARD_MESSAGE;
+/* A missing valid profile is not proof that the card number is wrong. */
+code = 'NO_VALID_PROFILE'; message = 'تعذر العثور على باقة صالحة لهذا الكرت';
 } else if (/\b(?:user(?:name)?\s+(?:does not exist|not found|unknown)|unknown user(?:name)?|no such user|user not found|account not found|no such account)\b|(?:رقم الكرت|اسم المستخدم|الحساب) غير موجود|لا يوجد (?:حساب|مستخدم) بهذا/.test(t)) {
 code = 'USER_NOT_FOUND'; message = BAD_CARD_MESSAGE;
 } else if (/\b(?:invalid username|invalid user name|invalid user)(?!\s+(?:or|and|&)\s+password)\b/.test(t)) {
 code = 'INVALID_USERNAME'; message = BAD_CARD_MESSAGE;
-} else if (/\b(?:invalid (?:username|user name|user) (?:or|and|&) password|wrong (?:username|user name) or password|invalid credentials|incorrect (?:username|user name) or password|authentication failed|access.reject|radius reject|bad credentials)\b|(?:بيانات الدخول|بيانات الحساب) غير صحيحة/.test(t)) {
+} else if (/\b(?:invalid (?:username|user name|user) (?:or|and|&) password|wrong (?:username|user name) or password|invalid credentials|incorrect (?:username|user name) or password|bad credentials)\b|(?:بيانات الدخول|بيانات الحساب) غير صحيحة/.test(t)) {
 code = 'INVALID_CREDENTIALS'; message = hasPassword ? 'اسم المستخدم أو كلمة المرور خطأ' : BAD_CARD_MESSAGE;
+} else if (/\b(?:radius reject|access.reject|authentication failed|auth(?:entication)? rejected|reject received|radius access.reject)\b/.test(t)) {
+code = 'AUTH_REJECTED'; message = 'تعذر تسجيل الدخول، تواصل مع الدعم إذا تكرر الخطأ';
 } else if (/\b(?:invalid password|wrong password|bad password|incorrect password)\b|كلمة المرور غير صحيحة/.test(t)) {
 code = 'INVALID_PASSWORD'; message = hasPassword ? 'كلمة المرور خطأ' : BAD_CARD_MESSAGE;
 } else if (/\b(?:login denied|access denied|authorization denied|login not allowed|login rejected|not allowed to login)\b|تم رفض تسجيل الدخول/.test(t)) {
-code = 'REJECTED'; message = hasPassword ? 'تعذر الدخول، تحقق من بيانات الكرت' : BAD_CARD_MESSAGE;
+code = 'REJECTED'; message = 'تعذر تسجيل الدخول، حاول مجددا أو تواصل مع الدعم';
 } else if (/[\u0600-\u06FF]/.test(text) && !/[A-Za-z]/.test(text)) {
 code = 'SERVER_ARABIC'; message = 'تعذر تسجيل الدخول، تواصل مع الدعم';
 } else {
 /* A generic unknown Hotspot rejection is not proof of any specific limit.
    Do not replace known network errors with a bad-card message. */
-message = hasPassword ? 'تعذر الدخول، تحقق من بيانات الكرت' : BAD_CARD_MESSAGE;
+message = 'تعذر تسجيل الدخول، حاول مجددا أو تواصل مع الدعم';
 }
 return { code:code, message:message,
-confirmed:code !== 'UNKNOWN' && code !== 'REJECTED' && code !== 'NO_VALID_PROFILE' && code !== 'SERVER_ARABIC',
+confirmed:code !== 'UNKNOWN' && code !== 'REJECTED' && code !== 'AUTH_REJECTED' && code !== 'SERVER_ARABIC',
 credentialFailure: code === 'USER_NOT_FOUND' || code === 'INVALID_USERNAME' || code === 'INVALID_CREDENTIALS' || code === 'INVALID_PASSWORD' };
 }
 function readableError(raw) { return classifyHotspotError(raw, !!cfg.passwordRequired).message; }
@@ -198,13 +201,16 @@ setText(counter, Math.floor(seconds / 60) + ' دقيقة و ' + (seconds % 60) +
 blockTimer = setTimeout(blockTick, 1000);
 }
 function isBlocked() {
-if (blockState().until > now()) { blockTick(); return true; }
+var state = blockState();
+if (state.until > now()) { blockTick(); return true; }
+/* Expired blocks must reset the counter even after closing the tab. */
+if (state.until > 0) storeBlock({count:0,until:0});
 return false;
 }
 function recordBadCredentials(raw) {
 if (!classifyHotspotError(raw, !!cfg.passwordRequired).credentialFailure) return;
 var state = blockState();
-if (state.until <= now()) state.until = 0;
+if (state.until && state.until <= now()) { state.until = 0; state.count = 0; }
 state.count++;
 var blocker = d.querySelector('script[enable-hot-blocker]');
 var limit = Math.max(1, parseInt(blocker && blocker.getAttribute('try-count'), 10) || 10);
@@ -236,7 +242,15 @@ try { return decodeURIComponent(c.substring(prefix.length)); } catch (ignore) { 
 return null;
 }
 function deleteLegacyCookie(key) { d.cookie = key + '=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; SameSite=Lax'; }
+function maySavePassword() { return storageGet(safeLocal(), PASSWORD_OPT_IN) === '1'; }
+function privateCards(cards) {
+if (maySavePassword()) return cards;
+var safe = [];
+for (var i = 0; i < cards.length; i++) safe.push({username:cards[i].username,password:''});
+return safe;
+}
 function saveCards() {
+recentCards = privateCards(recentCards);
 return storageSet(safeLocal(), STORE, JSON.stringify({savedAt:now(),cards:recentCards}));
 }
 function migrateCards() {
@@ -261,6 +275,15 @@ var raw = storageGet(safeLocal(), STORE), stored;
 try { stored = raw ? JSON.parse(raw) : null; } catch (ignore) { stored = null; }
 if (stored && typeof stored.savedAt === 'number' && stored.savedAt <= now() && now() - stored.savedAt < HISTORY_TTL) {
 recentCards = parseCards(JSON.stringify(stored.cards));
+/* Remove old plaintext passwords without extending the original 30-day TTL. */
+if (!maySavePassword()) {
+var needsScrub = false;
+for (var n = 0; n < recentCards.length; n++) if (recentCards[n].password) needsScrub = true;
+if (needsScrub) {
+recentCards = privateCards(recentCards);
+storageSet(safeLocal(), STORE, JSON.stringify({savedAt:stored.savedAt,cards:recentCards}));
+}
+}
 return;
 }
 if (raw) storageRemove(safeLocal(), STORE);
@@ -273,7 +296,18 @@ var saved = [{username:user,password:cfg.passwordRequired ? pass : ''}];
 for (var i = 0; i < recentCards.length && saved.length < 2; i++) {
 if (recentCards[i].username !== user) saved.push(recentCards[i]);
 }
-recentCards = saved; saveCards();
+recentCards = privateCards(saved); saveCards();
+}
+function updatePasswordChoice() {
+var choice = el('rememberPasswordChoice');
+if (choice) choice.checked = maySavePassword();
+}
+function changePasswordChoice() {
+var choice = el('rememberPasswordChoice');
+if (!choice) return;
+if (choice.checked) storageSet(safeLocal(), PASSWORD_OPT_IN, '1');
+else { storageRemove(safeLocal(), PASSWORD_OPT_IN); recentCards = privateCards(recentCards); saveCards(); }
+renderCards();
 }
 function hidePopup(popup) {
 if (popup) { removeClass(popup, 'active'); popup.style.display = 'none'; }
@@ -326,12 +360,22 @@ function speedConfirm() {
 var choice = selectedSpeed();
 setText(el('speedConfirmation'), choice === 'hotspot' ? (cfg.defaultSpeedText || 'هوتسبوت') : 'السرعة المختارة: ' + speedName(choice));
 }
-function saveSpeed(choice) { storageSet(safeSession(), SPEED_STORE, choice); }
-function readSpeed() {
-var val = storageGet(safeSession(), SPEED_STORE), ports = cfg.speedPorts || {};
-return val === 'hotspot' || ports[val] ? val : 'hotspot';
+function saveSpeed(choice, user) {
+/* This records the REQUESTED speed only after RouterOS confirms login.
+   Port signals do not by themselves prove that a rate was applied. */
+storageSet(safeSession(), SPEED_STORE, choice);
+storageSet(safeSession(), SPEED_USER, user);
 }
-function showSpeed() { setText(el('speed_choice'), speedName(readSpeed())); }
+function clearSpeed() { storageRemove(safeSession(), SPEED_STORE); storageRemove(safeSession(), SPEED_USER); }
+function readSpeed(user) {
+var val = storageGet(safeSession(), SPEED_STORE), ports = cfg.speedPorts || {};
+if (!user || storageGet(safeSession(), SPEED_USER) !== user) return null;
+return val === 'hotspot' || ports[val] ? val : null;
+}
+function showSpeed(user) {
+var choice = readSpeed(user || (el('username') && el('username').textContent));
+setText(el('speed_choice'), choice ? speedName(choice) : 'غير محددة');
+}
 function signalImage(port) {
 try {
 var img = new Image(); signalImages.push(img);
@@ -353,7 +397,8 @@ setTimeout(function () { if (loginPending && serial === activeLoginSerial) callb
 }
 function formatBytes(v) {
 var s = trim(v);
-if (!s || s === '---' || s.toLowerCase() === 'unlimited') return 'غير محدود';
+if (!s || s === '---' || s.toLowerCase() === 'unknown') return 'غير متاح';
+if (s.toLowerCase() === 'unlimited') return 'غير محدود';
 var value = Number(s);
 if (!isFinite(value) || value < 0) return 'غير متاح';
 if (value < 1024) return value + ' بايت';
@@ -363,7 +408,8 @@ return (value / 1073741824).toFixed(2) + ' جيجابايت';
 }
 function formatTime(v) {
 var s = trim(v), parts, units = {w:'أسبوع', d:'يوم', h:'ساعة', m:'دقيقة', s:'ثانية'};
-if (!s || s === '---' || s.toLowerCase() === 'unlimited') return 'غير محدود';
+if (!s || s === '---' || s.toLowerCase() === 'unknown') return 'غير متاح';
+if (s.toLowerCase() === 'unlimited') return 'غير محدود';
 if (/^\d+(?::\d{1,2}){1,2}$/.test(s)) {
 var a = s.split(':');
 return a.length === 2 ? a[0] + ' دقيقة ' + a[1] + ' ثانية' : a[0] + ' ساعة ' + a[1] + ' دقيقة ' + a[2] + ' ثانية';
@@ -384,7 +430,9 @@ statusRequest = null;
 function scheduleStatus() {
 clearTimeout(statusTimer);
 if (!signedIn || logoutPending) return;
-var delay = earlyNegativeCount && now() - loginTimestamp < 15000 ? 1500 : (d.hidden ? 20000 : 8000);
+var base = d.hidden ? 20000 : 8000;
+var delay = earlyNegativeCount && now() - loginTimestamp < 15000 ? 1500 :
+(Math.min(120000, base * Math.pow(2, Math.min(statusFailures, 4))) + Math.floor(Math.random() * 1200));
 statusTimer = setTimeout(function () {
 if (!signedIn || logoutPending) return;
 statusRequest = request('/status?var=callBack&t=' + now(), {kind:'status', next:scheduleStatus});
@@ -404,7 +452,7 @@ if (was) showError('انتهت الجلسة، سجل الدخول مجددا');
 return;
 }
 signedIn = true; earlyNegativeCount = 0;
-finishLogin(); finishLogout(); manualFallbackVisible(false); statusOpen(); showSpeed();
+finishLogin(); finishLogout(); manualFallbackVisible(false); statusOpen();
 var fields = ['username','remain_bytes_total','session_time_left','uptime','bytes_in','bytes_out'];
 for (var i = 0; i < fields.length; i++) {
 var key = fields[i], value = response[key]; if (value == null) continue;
@@ -412,15 +460,16 @@ if (key === 'username') setText(el(key), safeDecode(value));
 else if (key === 'remain_bytes_total' || key === 'bytes_in' || key === 'bytes_out') setText(el(key), formatBytes(value));
 else if (key === 'session_time_left' || key === 'uptime') setText(el(key), formatTime(value));
 }
+showSpeed(safeDecode(response.username || ''));
 }
 function loggedInReply(response) {
 if (!isLoggedIn(response.logged_in)) { finishLogin(); showError('تعذر تأكيد الدخول، حاول مجددا'); return; }
-var user = attemptUser, pass = attemptPass;
+var user = attemptUser, pass = attemptPass, speed = attemptSpeed;
 signedIn = true; loginTimestamp = now(); earlyNegativeCount = 0;
 finishLogin(); finishLogout(); manualFallbackVisible(false); clearError(); resetBadCredentials();
-if (user) rememberCard(user, pass);
+if (user) { rememberCard(user, pass); saveSpeed(speed, user); }
 attemptUser = ''; attemptPass = '';
-statusOpen(); showSpeed(); if (user) setText(el('username'), user);
+statusOpen(); if (user) setText(el('username'), user); showSpeed(user);
 startStatus();
 }
 function loginErrorReply(response) {
@@ -429,7 +478,7 @@ finishLogin(); loginOpen();
 var original = trim(response.error_orig || '') || trim(response.error || '');
 showError(readableError(original));
 recordBadCredentials(original);
-attemptUser = ''; attemptPass = '';
+attemptUser = ''; attemptPass = ''; attemptSpeed = 'hotspot';
 }
 function loginStartReply(response) {
 if (isLoggedIn(response.logged_in)) loggedInReply(response);
@@ -438,7 +487,7 @@ else if (loginPending) { finishLogin(); showError('تعذر تأكيد الدخ�
 function loggedOutReply(response) {
 if (isLoggedIn(response.logged_in)) { finishLogout(); showError('تعذر تسجيل الخروج، حاول مجددا'); startStatus(); return; }
 signedIn = false; epoch++; stopStatus();
-finishLogout(); finishLogin(); resetStatus(); loginOpen();
+finishLogout(); finishLogin(); clearSpeed(); resetStatus(); loginOpen();
 }
 function dispatchByKind(kind, response) {
 if (!response || typeof response !== 'object') return false;
@@ -468,7 +517,7 @@ try { xhr.onreadystatechange = null; xhr.onerror = null; } catch (ignore) {}
 if (requestEpoch !== epoch) return;
 if (problem) {
 if (options.kind === 'login') {
-finishLogin(); attemptUser = ''; attemptPass = ''; manualFallbackVisible(true);
+finishLogin(); attemptUser = ''; attemptPass = ''; attemptSpeed = 'hotspot'; manualFallbackVisible(true);
 showError(problem === 'TIMEOUT' ? 'تأخر رد الراوتر، حاول مجددا' :
 problem === 'NETWORK' ? 'انقطع الاتصال بالراوتر، حاول مجددا' :
 problem === 'HTTP' ? 'تعذر الاتصال بالراوتر، حاول مجددا' :
@@ -512,11 +561,11 @@ if (!user || user.length > 64 || (cfg.passwordRequired && (!pass || pass.length 
 showError(cfg.passwordRequired ? 'أدخل اسم المستخدم وكلمة المرور' : 'أدخل رقم الكرت أولا');
 return false;
 }
-attemptUser = user; attemptPass = pass; loginPending = true;
+attemptUser = user; attemptPass = pass; attemptSpeed = selectedSpeed(); loginPending = true;
 epoch++; activeLoginSerial++;
 var serial = activeLoginSerial, choice = selectedSpeed();
 if ($submit) { $submit.disabled = true; addClass($submit, 'processing'); }
-clearError(); saveSpeed(choice); speedConfirm();
+clearError(); speedConfirm();
 signalSpeed(choice, serial, function () {
 if (!loginPending || serial !== activeLoginSerial) return;
 var body = 'username=' + encodeURIComponent(user);
@@ -534,7 +583,7 @@ request('/logout?erase-cookie=true&var=callBack', {kind:'logout'});
 }
 function openPopup(target) {
 if (!target) return;
-if (target.id === 'previous-cards') renderCards();
+if (target.id === 'previous-cards') { updatePasswordChoice(); renderCards(); }
 target.style.display = 'block'; addClass(target, 'active');
 if (target.id === 'previous-cards') addClass(d.body, 'previous-cards-visible');
 if ($login) { $login.style.display = 'none'; addClass($login, 'inactive'); }
@@ -641,6 +690,8 @@ var manualLogin = el('manualLoginFallback');
 if (manualLogin) manualLogin.addEventListener('click', submitNative, false);
 var clearHistory = el('clearPreviousCards');
 if (clearHistory) clearHistory.addEventListener('click', clearCards, false);
+var passwordChoice = el('rememberPasswordChoice');
+if (passwordChoice) { updatePasswordChoice(); passwordChoice.addEventListener('change', changePasswordChoice, false); }
 var speeds = d.getElementsByName('speed-choice');
 for (var i = 0; i < speeds.length; i++) speeds[i].addEventListener('change', speedConfirm, false);
 d.addEventListener('visibilitychange', function () { if (signedIn && !logoutPending) scheduleStatus(); }, false);

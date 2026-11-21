@@ -11,7 +11,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Check JavaScript syntax
+      - name: Validate legacy JavaScript
         run: node --check js/portal.core.js
       - name: Run offline regression tests
-        run: node --test tests/portal.test.js
+        run: node --test tests/*.test.js

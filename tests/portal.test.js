@@ -30,12 +30,12 @@ test('MikroTik errors are classified without inventing a quota cause', () => {
     ['transfer limit reached', 'DATA_LIMIT', 'انتهى رصيد الكرت'],
     ['uptime limit reached', 'TIME_LIMIT', 'انتهى وقت الكرت'],
     ['account expired', 'EXPIRED', 'انتهت صلاحية الكرت'],
-    ['too many active sessions', 'SESSION_LIMIT', 'الكرت مستخدم على جهاز آخر'],
+    ['too many active sessions', 'SESSION_LIMIT', 'الكرت لديه جلسة نشطة'],
     ['MAC mismatch', 'DEVICE_RESTRICTION', 'هذا الكرت غير مسموح على هذا الجهاز'],
     ['user not found', 'USER_NOT_FOUND', 'الكرت خطأ، حاول بكرت آخر'],
     ['invalid username or password', 'INVALID_CREDENTIALS', 'اسم المستخدم أو كلمة المرور خطأ'],
     ['RADIUS timeout', 'AUTH_SERVER_UNAVAILABLE', 'خادم الشبكة لا يستجيب، حاول لاحقا'],
-    ['unmapped rejection', 'UNKNOWN', 'تعذر الدخول، تحقق من بيانات الكرت'],
+    ['unmapped rejection', 'UNKNOWN', 'تعذر تسجيل الدخول، حاول مجددا أو تواصل مع الدعم'],
   ];
   for (const [error, code, message] of cases) {
     const out = classify(error, true);
