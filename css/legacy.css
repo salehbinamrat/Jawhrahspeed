@@ -56,3 +56,26 @@ button,input,a{font-family:Arial,Tahoma,sans-serif}
 @media(max-width:319px){.screen-content{padding:7px 4px}.brand-copy h1{font-size:19px}.code-logo{width:54px;height:54px}.logo-core{width:51px;height:51px;line-height:51px;font-size:34px}.speed-choice{width:47%;margin-bottom:5px}.services-grid>button{font-size:11px}}
 html.no-css-vars .logo-core.icon-diamond:before{content:'◆'!important;position:relative!important;display:block!important;width:70px;height:70px;background:none!important;-webkit-mask:none!important;mask:none!important;color:#ec9d21;font:normal 52px/70px Arial,Tahoma,sans-serif!important}
 html.no-css-vars .logo-core.icon-diamond:after{display:none!important}
+/* Avoid an invisible-by-scroll login button in short legacy captive windows. */
+@media(max-height:760px){
+ .screen-content{padding:5px 6px 12px}
+ .main-frame{margin-bottom:6px;padding:6px 5px}
+ .brand-dates{font-size:10px;margin-bottom:1px}
+ .brand-identity{min-height:63px}
+ .code-logo{width:60px;height:60px}
+ .logo-core{width:52px;height:52px;line-height:52px;font-size:35px}
+ .brand-copy h1{font-size:21px}
+ .brand-copy p{font-size:10px;margin-top:2px}
+ .theme-bar{margin:2px 0}
+ .theme-bar button{min-height:25px;min-width:25px;margin:0 1px}
+ .speed-frame-title,.login-frame-title{font-size:14px;margin-bottom:3px}
+ .speed-options{font-size:0}
+ .speed-choice{width:24%;margin:0 .2% 1px}
+ .speed-card{min-height:43px;padding:5px 1px}
+ .speed-card strong{font-size:10px}
+ .speed-confirmation{margin:3px auto 0;padding:3px;font-size:10px}
+ .manual-entry-separator{margin:4px auto}
+ .login-field{margin:4px 0}
+ .login-input{height:44px;min-height:44px}
+ .login-submit,.recent-logins-btn{min-height:46px;height:46px}
+}

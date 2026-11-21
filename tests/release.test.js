@@ -39,3 +39,12 @@ test('native RouterOS fallback stays available with POST not JSON callback', () 
   assert.match(html, /id="manualLoginFallback"/);
   assert.match(fs.readFileSync(path.join(root, 'js/portal.core.js'), 'utf8'), /\$form\.submit\(\)/);
 });
+
+test('both modern and legacy short-screen layouts keep the login action accessible', () => {
+  const modern = fs.readFileSync(path.join(root, 'css/style.css'), 'utf8');
+  const legacy = fs.readFileSync(path.join(root, 'css/legacy.css'), 'utf8');
+  assert.match(modern, /r8 compact-height usability/);
+  assert.match(modern, /@media \(max-height:760px\)/);
+  assert.match(legacy, /@media\(max-height:760px\)/);
+  assert.match(legacy, /\.speed-options\{font-size:0\}/);
+});

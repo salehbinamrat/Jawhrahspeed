@@ -60,7 +60,9 @@ def run():
             page.wait_for_timeout(100)
             horizontal=page.evaluate('document.documentElement.scrollWidth > document.documentElement.clientWidth + 2')
             visible=page.locator('.login-submit').is_visible()
-            assert visible and not horizontal, (width,visible,horizontal)
+            button_box=page.locator('.login-submit').bounding_box()
+            in_first_view=button_box is not None and button_box['y']+button_box['height'] <= height - 4
+            assert visible and not horizontal and in_first_view, (width,visible,horizontal,button_box,height)
             findings.append(f'{width}x{height}: login visible; no horizontal overflow')
             if width==393:
                 page.locator('button[parent-id="previous-cards"]').click()
@@ -88,7 +90,9 @@ def run():
         assert page.locator('.login-submit').is_visible()
         assert page.locator('.speed-choice').count()==4
         assert page.locator('.speed-card').first.is_visible()
-        findings.append('Legacy CSS only: login and four speed options visible')
+        box=page.locator('.login-submit').bounding_box()
+        assert box and box['y']+box['height'] <= 564, box
+        findings.append('Legacy CSS only: login and four speed options in first viewport')
         page.close()
         browser.close()
     print('BROWSER SMOKE PASSED:\n  '+'\n  '.join(findings))
